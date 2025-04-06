@@ -1,0 +1,16 @@
+{
+  "name": "cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create:react": "node scripts/createReact.js",
+    "create:node": "node scripts/createNode.js",
+    "create:react-native": "node scripts/createReactNative.js",
+    "create:electron": "node scripts/createElectron.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

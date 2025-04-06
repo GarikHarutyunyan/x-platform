@@ -1,0 +1,5 @@
+{
+  "directory": "mynewapp",
+  "framework": "vite",
+  "useTypeScript": true
+}
