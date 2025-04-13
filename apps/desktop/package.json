@@ -1,0 +1,17 @@
+{
+  "name": "desktop",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "concurrently \"cd renderer && npx vite --host --port 5173\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "cd renderer && npm run build && cd ../ &&  npx tsc",
+    "start": "NODE_ENV=production electron .",
+    "postinstall": "cd renderer && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^latest_version",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.8.3",
+    "wait-on": "^7.0.1"
+  }
+}
