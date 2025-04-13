@@ -9,14 +9,33 @@ function isValidName(name) {
   return regex.test(name);
 }
 
-// Read the config file
-const configPath = path.join(__dirname, "../config.json");
-if (!fs.existsSync(configPath)) {
-  console.error("❌ Config file not found!");
-  process.exit(1);
+// Parse CLI arguments
+const args = process.argv.slice(2);
+let config = {};
+let configPath;
+
+// Extract CLI arguments
+args.forEach((arg, i) => {
+  if (arg === "--config" && args[i + 1]) {
+    configPath = args[i + 1];
+  } else if (arg.startsWith("--")) {
+    const key = arg.slice(2);
+    const value = args[i + 1]?.startsWith("--") ? true : args[i + 1];
+    config[key] = value === "true" ? true : value === "false" ? false : value;
+  }
+});
+
+// Read config file if path is provided
+if (configPath) {
+  if (!fs.existsSync(configPath)) {
+    console.error(`❌ Config file not found at ${configPath}`);
+    process.exit(1);
+  }
+  const fileConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  config = { ...fileConfig, ...config }; // CLI overrides config file
 }
 
-const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+// Default directory
 let projectDir = config.directory || "my-expo-app";
 
 // Validate project name
@@ -27,28 +46,23 @@ if (!isValidName(projectDir)) {
 
 // Check if the project directory exists, and increment the name if it does
 let counter = 1;
-let originalProjectDir = projectDir;
+const originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
   projectDir = `${originalProjectDir}-${counter}`;
   counter++;
 }
 
-// Prepare the TypeScript flag if set in the config
-let tsFlag = "";
-if (config.useTypeScript) {
-  tsFlag = "--template expo-template-blank-typescript";
-} else {
-  tsFlag = "--template expo-template-blank";
-}
+// Prepare the TypeScript flag if set
+const tsFlag = config.useTypeScript
+  ? "--template expo-template-blank-typescript"
+  : "--template expo-template-blank";
 
-// Create the project using Expo CLI (local version)
+// Create the project using Expo CLI
 console.log(`🚀 Creating Expo app in "${projectDir}"...`);
-
-// Use the local npx expo command for initialization
 const command = `npx expo init ${projectDir} ${tsFlag}`;
 execSync(command, { stdio: "inherit" });
 
 console.log("✅ Expo app setup complete!");
 console.log(`🚀 To run the app, navigate to the ${projectDir} directory and use:`);
 console.log(`    cd ${projectDir}`);
-console.log(`    npx expo start`);  // Start the Expo development server
+console.log(`    npx expo start`);

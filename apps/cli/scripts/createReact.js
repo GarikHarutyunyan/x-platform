@@ -2,72 +2,94 @@
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
+const yargs = require("yargs/yargs");
+const { hideBin } = require("yargs/helpers");
 
-// Function to validate project name (only alphanumeric, hyphens, and underscores)
+// Function to validate project name
 function isValidName(name) {
   const regex = /^[a-zA-Z0-9_-]+$/;
   return regex.test(name);
 }
 
-// Read the config file
-const configPath = path.join(__dirname, "../config.json");
-if (!fs.existsSync(configPath)) {
-  console.error("❌ Config file not found!");
-  process.exit(1);
+// Parse CLI arguments
+const argv = yargs(hideBin(process.argv))
+  .option("config", {
+    alias: "c",
+    type: "string",
+    describe: "Path to JSON config file",
+  })
+  .option("directory", {
+    alias: "d",
+    type: "string",
+    describe: "Project directory name",
+  })
+  .option("useTypeScript", {
+    alias: "ts",
+    type: "boolean",
+    describe: "Use TypeScript template",
+  })
+  .option("framework", {
+    alias: "f",
+    type: "string",
+    describe: "React framework (vite, next, remix)",
+  })
+  .help()
+  .argv;
+
+// Step 1: Load config from file if provided
+let config = {};
+debugger
+if (argv.config) {
+  const configPath = path.resolve(argv.config);
+  if (!fs.existsSync(configPath)) {
+    console.error(`❌ Config file not found at "${configPath}"`);
+    process.exit(1);
+  }
+  config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 }
 
-const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-let projectDir = config.directory || "my-react-app";
+// Step 2: Override config with CLI flags
+config.directory = argv.directory || config.directory || "my-react-app";
+config.useTypeScript = argv.useTypeScript ?? config.useTypeScript ?? false;
+config.framework = argv.framework || config.framework || "vite";
 
-// Validate project name
+// Step 3: Validate project name
+let projectDir = config.directory;
 if (!isValidName(projectDir)) {
-  console.error(`❌ "${projectDir}" is not a valid project name. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+  console.error(`❌ "${projectDir}" is not a valid project name.`);
   process.exit(1);
 }
 
-// Check if the project directory exists, and increment the name if it does
+// Step 4: Handle name collisions
 let counter = 1;
-let originalProjectDir = projectDir;
+const originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
-  projectDir = `${originalProjectDir}-${counter}`;
-  counter++;
+  projectDir = `${originalProjectDir}-${counter++}`;
 }
 
-// Prepare the TypeScript flag if set in the config
-let tsFlag = "";
-if (config.useTypeScript) {
-  tsFlag = "--template typescript";
-} else {
-  tsFlag = "--template react";
-}
-
-// Create the React project using Vite, Next.js, or Remix based on config
-console.log(`🚀 Creating React app in "${projectDir}"...`);
-
-// Update the command to use Vite, Next.js, or Remix
+// Step 5: Build command
 let createCommand;
 if (config.framework === "vite") {
   createCommand = `npx create-vite@latest ${projectDir} --template ${config.useTypeScript ? "react-ts" : "react"}`;
 } else if (config.framework === "next") {
+  const tsFlag = config.useTypeScript ? "--typescript" : "";
   createCommand = `npx create-next-app@latest ${projectDir} ${tsFlag}`;
 } else if (config.framework === "remix") {
+  const tsFlag = config.useTypeScript ? "--typescript" : "--javascript";
   createCommand = `npx create-remix@latest ${projectDir} ${tsFlag}`;
 } else {
-  console.error("❌ Invalid framework specified. Please choose either 'vite', 'next', or 'remix'.");
+  console.error("❌ Invalid framework. Choose vite, next, or remix.");
   process.exit(1);
 }
 
-// Execute the command to create the project
+// Step 6: Run commands
+console.log(`🚀 Creating React app in "${projectDir}"...`);
 execSync(createCommand, { stdio: "inherit" });
 
-// Change directory to the newly created project
 process.chdir(projectDir);
-
-// Install dependencies
-console.log(`🔄 Installing dependencies for "${projectDir}"...`);
+console.log(`🔄 Installing dependencies...`);
 execSync("npm install", { stdio: "inherit" });
 
-console.log("✅ React app setup complete!");
-console.log(`🚀 To run the app, navigate to the ${projectDir} directory and use:`);
-console.log(`    cd ${projectDir}`);
-console.log(`    npm run dev`);  // For Vite, Next.js, or Remix development server
+console.log("✅ Setup complete!");
+console.log(`📂 cd ${projectDir}`);
+console.log(`▶️ npm run dev`);

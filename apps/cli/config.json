@@ -1,5 +1,17 @@
 {
-  "directory": "mynewapp",
-  "framework": "vite",
-  "useTypeScript": true
+  "react": {
+    "directory": "myreactapp",
+    "framework": "vite",
+    "useTypeScript": true
+  },
+  "node": {
+    "directory": "my-node-api"
+  },
+  "reactNative": {
+    "directory": "my-rn-app",
+    "useTypeScript": false
+  },
+  "electron": {
+    "directory": "my-desktop-tool"
+  }
 }

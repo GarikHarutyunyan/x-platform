@@ -2,20 +2,43 @@
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
+const yargs = require("yargs/yargs");
+const { hideBin } = require("yargs/helpers");
 
-// Read the config file
-const configPath = path.join(__dirname, "../config.json");
-if (!fs.existsSync(configPath)) {
-  console.error("❌ Config file not found!");
-  process.exit(1);
+// Parse CLI arguments
+const argv = yargs(hideBin(process.argv))
+  .option("config", {
+    alias: "c",
+    type: "string",
+    describe: "Path to JSON config file",
+  })
+  .option("directory", {
+    alias: "d",
+    type: "string",
+    describe: "Project directory name",
+  })
+  .help()
+  .argv;
+
+// Load config from file if provided
+let config = {};
+if (argv.config) {
+  const configPath = path.resolve(argv.config);
+  if (!fs.existsSync(configPath)) {
+    console.error(`❌ Config file not found at "${configPath}"`);
+    process.exit(1);
+  }
+  config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 }
 
-const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-let projectDir = config.directory || "my-node-app";
+// Override config with CLI flags
+config.directory = argv.directory || config.directory || "my-node-app";
+
+let projectDir = config.directory;
 
 // Check if the project directory exists, and increment the name if it does
 let counter = 1;
-let originalProjectDir = projectDir;
+const originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
   projectDir = `${originalProjectDir}-${counter}`;
   counter++;
