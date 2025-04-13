@@ -7,7 +7,8 @@
     "create:react": "node scripts/createReact.js",
     "create:node": "node scripts/createNode.js",
     "create:react-native": "node scripts/createReactNative.js",
-    "create:electron": "node scripts/createElectron.js"
+    "create:electron": "node scripts/createElectron.js",
+    "create:x": "node scripts/createX.js"
   },
   "keywords": [],
   "author": "",
