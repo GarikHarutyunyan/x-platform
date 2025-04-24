@@ -6,5 +6,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createProject: (name: string) => ipcRenderer.send('create-project', name),
    onCommandLog: (callback: (msg: string) => void) => {
     ipcRenderer.on('command-log', (_, msg) => callback(msg));
-  }
+  },
+  onProjectCreated: (callback: (projectDir:string) => void) => {
+  ipcRenderer.on('project-created',(_, projectDir) =>  callback(projectDir));
+}
 });

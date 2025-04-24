@@ -58,21 +58,22 @@ ipcMain.on('create-project', (event, name) => {
   });
 
   child.stdout.on('data', (data) => {
-    console.log(`[create:x] ${data}`);
+    // console.log(`[create:x] ${data}`);
     event.sender.send('command-log', data.toString());
-
   });
 
-  child.stderr.on('data', (data) => {
-    console.error(`[create:x error] ${data}`);
-    event.sender.send('command-log', `[ERROR] ${data.toString()}`);
+  // child.stderr.on('data', (data) => {
+  //   // console.error(`[create:x error] ${data}`);
+  //   event.sender.send('command-log', `[ERROR] ${data.toString()}`);
 
-  });
+  // });
 
   child.on('close', (code) => {
     console.log(`create:x exited with code ${code}`);
-    event.sender.send('command-log', `Command finished with code ${code}`);
-
+    if (code === 0) {
+      // Send back the path of the newly created project
+      event.sender.send('project-created', path.join('C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli', name));
+    }
   });
 });
 

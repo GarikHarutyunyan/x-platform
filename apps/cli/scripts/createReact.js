@@ -18,10 +18,15 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     describe: "Path to JSON config file",
   })
-  .option("directory", {
-    alias: "d",
+  .option("name", {
+    alias: "n",
     type: "string",
-    describe: "Project directory name",
+    describe: "Project name (folder name)",
+  })
+  .option("path", {
+    alias: "p",
+    type: "string",
+    describe: "Path where to create the project",
   })
   .option("useTypeScript", {
     alias: "ts",
@@ -38,7 +43,6 @@ const argv = yargs(hideBin(process.argv))
 
 // Step 1: Load config from file if provided
 let config = {};
-debugger
 if (argv.config) {
   const configPath = path.resolve(argv.config);
   if (!fs.existsSync(configPath)) {
@@ -49,47 +53,62 @@ if (argv.config) {
 }
 
 // Step 2: Override config with CLI flags
-config.directory = argv.directory || config.directory || "my-react-app";
+config.name = argv.name || config.name || "my-react-app";
+config.path = path.resolve(argv.path || config.path || process.cwd());
 config.useTypeScript = argv.useTypeScript ?? config.useTypeScript ?? false;
 config.framework = argv.framework || config.framework || "vite";
 
+// 🔧 Ensure that the path exists
+if (!fs.existsSync(config.path)) {
+  fs.mkdirSync(config.path, { recursive: true });
+}
+
 // Step 3: Validate project name
-let projectDir = config.directory;
-if (!isValidName(projectDir)) {
-  console.error(`❌ "${projectDir}" is not a valid project name.`);
+if (!isValidName(config.name)) {
+  console.error(`❌ "${config.name}" is not a valid project name.`);
   process.exit(1);
 }
 
-// Step 4: Handle name collisions
+// Step 4: Determine full project directory and handle collisions
+let projectDir = path.join(config.path, config.name);
+const baseName = config.name;
 let counter = 1;
-const originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
-  projectDir = `${originalProjectDir}-${counter++}`;
+  const bumpedName = `${baseName}-${counter++}`;
+  projectDir = path.join(config.path, bumpedName);
 }
+const finalName = path.basename(projectDir); // used in CLI commands
 
-// Step 5: Build command
+// Step 5: Build the correct create command
 let createCommand;
 if (config.framework === "vite") {
-  createCommand = `npx create-vite@latest ${projectDir} --template ${config.useTypeScript ? "react-ts" : "react"}`;
+  createCommand = `npx create-vite@latest "${finalName}" --template ${config.useTypeScript ? "react-ts" : "react"}`;
 } else if (config.framework === "next") {
   const tsFlag = config.useTypeScript ? "--typescript" : "";
-  createCommand = `npx create-next-app@latest ${projectDir} ${tsFlag}`;
+  createCommand = `npx create-next-app@latest "${finalName}" ${tsFlag}`;
 } else if (config.framework === "remix") {
   const tsFlag = config.useTypeScript ? "--typescript" : "--javascript";
-  createCommand = `npx create-remix@latest ${projectDir} ${tsFlag}`;
+  createCommand = `npx create-remix@latest "${finalName}" ${tsFlag}`;
 } else {
   console.error("❌ Invalid framework. Choose vite, next, or remix.");
   process.exit(1);
 }
 
-// Step 6: Run commands
+// Step 6: Create project in temp dir, then move to final location
+const tempDir = path.join(process.cwd(), finalName);
 console.log(`🚀 Creating React app in "${projectDir}"...`);
 execSync(createCommand, { stdio: "inherit" });
 
+// Move project if not created directly in target
+if (tempDir !== projectDir) {
+  fs.renameSync(tempDir, projectDir);
+}
+
+// Step 7: Final setup
 process.chdir(projectDir);
 console.log(`🔄 Installing dependencies...`);
 execSync("npm install", { stdio: "inherit" });
 
 console.log("✅ Setup complete!");
-console.log(`📂 cd ${projectDir}`);
+console.log(`📂 cd "${projectDir}"`);
 console.log(`▶️ npm run dev`);

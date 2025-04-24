@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type FileNode = {
   name: string;
@@ -35,19 +35,31 @@ function App() {
   const [root, setRoot] = useState<FileNode | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [logs, setLogs] = useState<string[]>([]);
 
 useEffect(() => {
   window.electronAPI.onCommandLog((msg) => {
-    setLogs((prev) => [...prev, msg]);
+    setLogs(prev=>{
+      const newLogs = [...prev];
+      
+      if(msg !== newLogs.at(-1)){
+        return [...prev, msg]
+      }
+      return newLogs
+    });
+  });
+
+  window.electronAPI.onProjectCreated((projectDir) => {
+    setShowDialog(false);       // close modal
+    setProjectName('');         // reset input
+
+    // Re-read directory
+    // const path = 'C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli/apps';
+    window.electronAPI.readDirectory(projectDir).then((newRoot)=>{setRoot(newRoot);setIsLoading(false)});
   });
 }, []);
-
-  useEffect(() => {
-    const path = 'C:/Users/Lenovo/My Projects/FullStack/X-Platform';
-    window.electronAPI.readDirectory(path).then(setRoot);
-  }, []);
 
   const handleCreateProject = () => {
     setShowDialog(true);
@@ -58,15 +70,32 @@ useEffect(() => {
       window.electronAPI.createProject(projectName.trim());
       setProjectName('');
       setShowDialog(false);
+      setIsLoading(true)
     }
   };
 
+  const logsContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+  if (logsContainerRef.current) {
+    logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+  }
+}, [logs]);
+
   return (
     <div style={{ padding: 20, height: '100vh' }}>
-      <h2>📁 Project Explorer</h2>
       <button onClick={handleCreateProject} style={{ marginBottom: 16 }}>
         🚀 Create Project
       </button>
+      <br/>
+      {isLoading && 'Loading...'}
+      {!isLoading && root && (
+        <>
+          <h2>📁 Project Explorer</h2>
+          <FileTree node={root} />
+        </>
+      )
+      }
       {showDialog && (
         <div style={{
           background: '#00000088',
@@ -89,11 +118,10 @@ useEffect(() => {
           </div>
         </div>
       )}
-      {root ? <FileTree node={root} /> : 'Loading...'}
-      <div style={{ marginTop: 20, background: '#111', color: '#0f0', padding: 10, fontFamily: 'monospace', height: 200, overflowY: 'auto' }}>
-  <strong>Logs:</strong>
-  <pre>{logs.join('\n')}</pre>
-</div>
+      {isLoading && <div ref={logsContainerRef} style={{ marginTop: 20, background: '#111', color: '#0f0', padding: 10, fontFamily: 'monospace', height: 200, overflowY: 'auto' }}>
+        <strong>Logs:</strong>
+        <pre>{logs.join('\n')}</pre>
+      </div>}
     </div>
   );
 }

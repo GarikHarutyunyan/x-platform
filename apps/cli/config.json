@@ -1,17 +1,21 @@
 {
   "react": {
-    "directory": "myreactapp",
-    "framework": "vite",
-    "useTypeScript": true
+    "name": "web",
+    "path": "apps",
+    "useTypeScript": true,
+    "framework": "vite"
   },
   "node": {
-    "directory": "my-node-api"
+    "name": "server",
+    "path": "apps"
   },
   "reactNative": {
-    "directory": "my-rn-app",
+    "name": "mobile",
+    "path": "apps",
     "useTypeScript": false
   },
   "electron": {
-    "directory": "my-desktop-tool"
+    "name": "desktop",
+    "path": "apps"
   }
 }

@@ -10,9 +10,13 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     describe: "Path to config file",
   })
-  .option("directory", {
+  .option("name", {
     type: "string",
-    describe: "Project directory name",
+    describe: "Project name",
+  })
+  .option("path", {
+    type: "string",
+    describe: "Directory to create the project in",
   })
   .help()
   .argv;
@@ -22,6 +26,7 @@ function isValidName(name) {
   return regex.test(name);
 }
 
+// Load config
 let config = {};
 if (argv.config) {
   const configPath = path.resolve(argv.config);
@@ -32,31 +37,40 @@ if (argv.config) {
   config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 }
 
-config = { ...config, ...argv }; // Override config values with CLI flags
+// Merge CLI args over config
+config = { ...config, ...argv };
 
-let projectDir = config.directory || "my-electron-app";
+// Defaults
+config.name = config.name || "my-electron-app";
+config.path = path.resolve(config.path || process.cwd());
 
-if (!isValidName(projectDir)) {
-  console.error(`❌ "${projectDir}" is not a valid project name. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+// Validate name
+if (!isValidName(config.name)) {
+  console.error(`❌ "${config.name}" is not a valid project name. Only alphanumeric characters, hyphens, and underscores are allowed.`);
   process.exit(1);
 }
 
+// Determine final project directory with collision handling
+let projectDir = path.join(config.path, config.name);
+const baseName = config.name;
 let counter = 1;
-let originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
-  projectDir = `${originalProjectDir}-${counter}`;
-  counter++;
+  const newName = `${baseName}-${counter++}`;
+  projectDir = path.join(config.path, newName);
 }
+const finalName = path.basename(projectDir);
 
+// Create project
 console.log(`🚀 Creating Electron app in "${projectDir}"...`);
-
-fs.mkdirSync(projectDir);
+fs.mkdirSync(projectDir, { recursive: true });
 process.chdir(projectDir);
 
+// Initialize npm and install Electron
 execSync("npm init -y", { stdio: "inherit" });
 execSync("npm install electron", { stdio: "inherit" });
 
-fs.writeFileSync('main.js', `
+// Create main Electron file
+fs.writeFileSync("main.js", `
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
@@ -81,19 +95,15 @@ app.on('window-all-closed', () => {
 });
 `);
 
-fs.writeFileSync('package.json', JSON.stringify({
-  name: projectDir,
-  version: "1.0.0",
-  main: "main.js",
-  scripts: {
-    start: "electron .",
-  },
-  dependencies: {
-    electron: "^latest"
-  }
-}, null, 2));
+// Write package.json with script and Electron dependency
+const packageJsonPath = path.join(projectDir, "package.json");
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+packageJson.name = finalName;
+packageJson.main = "main.js";
+packageJson.scripts.start = "electron .";
+fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
 console.log("✅ Electron app setup complete!");
 console.log(`🚀 To run the Electron app, ensure your React app is running on http://localhost:5173 and then use:`);
-console.log(`    cd ${projectDir}`);
+console.log(`    cd "${projectDir}"`);
 console.log(`    npm start`);

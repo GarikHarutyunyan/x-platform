@@ -5,6 +5,12 @@ const { execSync } = require("child_process");
 const yargs = require("yargs/yargs");
 const { hideBin } = require("yargs/helpers");
 
+// Function to validate project name
+function isValidName(name) {
+  const regex = /^[a-zA-Z0-9_-]+$/;
+  return regex.test(name);
+}
+
 // Parse CLI arguments
 const argv = yargs(hideBin(process.argv))
   .option("config", {
@@ -12,10 +18,15 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     describe: "Path to JSON config file",
   })
-  .option("directory", {
-    alias: "d",
+  .option("name", {
+    alias: "n",
     type: "string",
-    describe: "Project directory name",
+    describe: "Project name (folder name)",
+  })
+  .option("path", {
+    alias: "p",
+    type: "string",
+    describe: "Path where to create the project",
   })
   .help()
   .argv;
@@ -32,16 +43,27 @@ if (argv.config) {
 }
 
 // Override config with CLI flags
-config.directory = argv.directory || config.directory || "my-node-app";
+config.name = argv.name || config.name || "my-node-app";
+config.path = path.resolve(argv.path || config.path || process.cwd());
 
-let projectDir = config.directory;
+// 🔧 Ensure that the path exists
+if (!fs.existsSync(config.path)) {
+  fs.mkdirSync(config.path, { recursive: true });
+}
 
-// Check if the project directory exists, and increment the name if it does
+// Validate project name
+if (!isValidName(config.name)) {
+  console.error(`❌ "${config.name}" is not a valid project name.`);
+  process.exit(1);
+}
+
+// Determine project directory and handle collisions
+let projectDir = path.join(config.path, config.name);
+const baseName = config.name;
 let counter = 1;
-const originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
-  projectDir = `${originalProjectDir}-${counter}`;
-  counter++;
+  const bumpedName = `${baseName}-${counter++}`;
+  projectDir = path.join(config.path, bumpedName);
 }
 
 // Create project directory
@@ -71,17 +93,17 @@ app.listen(PORT, () => {
 });
 `;
 
-fs.writeFileSync("index.js", serverCode);
+fs.writeFileSync("index.js", serverCode.trim());
 
 // Create a `.gitignore` file
 const gitignore = `
 node_modules/
 .env
 `;
-fs.writeFileSync(".gitignore", gitignore);
+fs.writeFileSync(".gitignore", gitignore.trim());
 
 // Modify package.json to add start script
-const packageJsonPath = path.join(process.cwd(), "package.json");
+const packageJsonPath = path.join(projectDir, "package.json");
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 packageJson.scripts = {
   ...packageJson.scripts,
@@ -92,4 +114,4 @@ packageJson.scripts = {
 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
 console.log("✅ Node.js + Express project setup complete!");
-console.log(`🚀 To start the server, run: cd ${projectDir} && npm start`);
+console.log(`🚀 To start the server, run:\n📂 cd "${projectDir}"\n▶️ npm start`);

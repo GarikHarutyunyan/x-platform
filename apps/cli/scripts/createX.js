@@ -3,6 +3,20 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
+const projectName = process.env.PROJECT_NAME || "my-app";
+const baseDir = process.cwd();
+let projectDir = path.join(baseDir, projectName);
+
+// If the folder exists, auto-increment the name (e.g., my-app-2, my-app-3, ...)
+let counter = 2;
+while (fs.existsSync(projectDir)) {
+  projectDir = path.join(baseDir, `${projectName}-${counter}`);
+  counter++;
+}
+
+fs.mkdirSync(projectDir, { recursive: true });
+console.log(`📁 Project directory created at: ${projectDir}`);
+
 const configPath = path.join(__dirname, "../config.json");
 if (!fs.existsSync(configPath)) {
   console.error("❌ Main config.json file not found!");
@@ -14,6 +28,7 @@ const fullConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
 // Utility to run a CLI command with a temp config file
 const runWithTempConfig = (label, command, configKey) => {
   const config = fullConfig[configKey];
+  config.path = projectDir + "/" + config.path;
   if (!config) {
     console.warn(`⚠️  Skipping ${label} — no "${configKey}" config found.`);
     return;
@@ -24,7 +39,10 @@ const runWithTempConfig = (label, command, configKey) => {
 
   console.log(`\n🛠️  Creating ${label} project...`);
   try {
-    execSync(`npm run ${command} -- --config "${tempConfigPath}"`, { stdio: "inherit" });
+    execSync(`npm run ${command} -- --config "${tempConfigPath}"`, {
+      stdio: "inherit",
+      cwd: projectDir, // Run inside the new project directory
+    });
     console.log(`✅ ${label} project created successfully.`);
   } catch (err) {
     console.error(`❌ Failed to create ${label} project:`, err.message);

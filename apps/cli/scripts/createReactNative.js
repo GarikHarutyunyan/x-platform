@@ -35,34 +35,48 @@ if (configPath) {
   config = { ...fileConfig, ...config }; // CLI overrides config file
 }
 
-// Default directory
-let projectDir = config.directory || "my-expo-app";
+// Defaults
+config.name = config.name || "my-expo-app";
+config.path = path.resolve(config.path || process.cwd());
+
+// Ensure the path exists
+if (!fs.existsSync(config.path)) {
+  fs.mkdirSync(config.path, { recursive: true });
+}
 
 // Validate project name
-if (!isValidName(projectDir)) {
-  console.error(`❌ "${projectDir}" is not a valid project name. Only alphanumeric characters, hyphens, and underscores are allowed.`);
+if (!isValidName(config.name)) {
+  console.error(`❌ "${config.name}" is not a valid project name. Only alphanumeric characters, hyphens, and underscores are allowed.`);
   process.exit(1);
 }
 
-// Check if the project directory exists, and increment the name if it does
+// Determine full path and handle collisions
+let projectDir = path.join(config.path, config.name);
+const baseName = config.name;
 let counter = 1;
-const originalProjectDir = projectDir;
 while (fs.existsSync(projectDir)) {
-  projectDir = `${originalProjectDir}-${counter}`;
-  counter++;
+  const bumpedName = `${baseName}-${counter++}`;
+  projectDir = path.join(config.path, bumpedName);
 }
+const finalName = path.basename(projectDir);
 
-// Prepare the TypeScript flag if set
+// Prepare the TypeScript flag
 const tsFlag = config.useTypeScript
   ? "--template expo-template-blank-typescript"
   : "--template expo-template-blank";
 
 // Create the project using Expo CLI
 console.log(`🚀 Creating Expo app in "${projectDir}"...`);
-const command = `npx expo init ${projectDir} ${tsFlag}`;
+const command = `npx expo init ${finalName} ${tsFlag}`;
 execSync(command, { stdio: "inherit" });
 
+// Move the project to final location if needed
+const tempDir = path.join(process.cwd(), finalName);
+if (tempDir !== projectDir) {
+  fs.renameSync(tempDir, projectDir);
+}
+
 console.log("✅ Expo app setup complete!");
-console.log(`🚀 To run the app, navigate to the ${projectDir} directory and use:`);
-console.log(`    cd ${projectDir}`);
+console.log(`🚀 To run the app, navigate to the directory and use:`);
+console.log(`    cd "${projectDir}"`);
 console.log(`    npx expo start`);
