@@ -2,26 +2,23 @@
 import { exec, spawn } from 'child_process';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import fs from 'fs';
+import open from 'open';
 import path from 'path';
+
+const runningProcesses = new Map<string, number>();
 
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-    preload: path.join(__dirname, 'preload.js'),
-    contextIsolation: true,
-    nodeIntegration: false,
-  },
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
-
-  win.loadURL('http://localhost:5173');
-  // if (process.env.NODE_ENV === 'development') {
-  // } else {
-  //   win.loadFile(join(__dirname, '../renderer/dist/index.html'));
-  // }
+  win.loadURL('http://localhost:3001');
 };
-
 
 app.whenReady().then(createWindow);
 
@@ -39,8 +36,99 @@ ipcMain.handle('read-directory', async (_, dirPath: string) => {
     }
     return result;
   };
-
   return walk(dirPath);
+});
+
+ipcMain.handle('is-startable-project', async (_, dirPath: string) => {
+  try {
+    const pkgPath = path.join(dirPath, 'package.json');
+    if (!fs.existsSync(pkgPath)) return false;
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    return !!pkg.scripts?.start || !!pkg.scripts?.dev;
+  } catch {
+    return false;
+  }
+});
+
+ipcMain.on('start-project', (event, dirPath: string) => {
+  if (runningProcesses.has(dirPath)) return;
+  let command = 'start'
+  const pkgPath = path.join(dirPath, 'package.json');
+  if (!fs.existsSync(pkgPath)) return;
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  
+  if (!pkg.scripts?.start && !!pkg.scripts?.dev) {
+    command = 'run dev'
+  }
+
+  const child = spawn('npm', [command], {
+    cwd: dirPath,
+    shell: true,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: true
+  });
+  child.stdout.setEncoding('utf8');
+
+  child.stdout.on('data', (data) => {
+    const output = data.toString();
+    console.log('Expo Output:', output);
+    event.sender.send('command-log', output);
+
+    const match = output.match(/exp:\/\/\S+/);
+    if (match) {
+      event.sender.send('expo-url', match[0]);
+    }
+  });
+
+  runningProcesses.set(dirPath, child.pid ?? 0);
+  child.unref();
+
+  try {
+    const pkgPath = path.join(dirPath, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const devDependencies = Object.keys(pkg.devDependencies || {});
+    const dependencies = Object.keys(pkg.dependencies || {});
+    const isVite = devDependencies.includes('vite');
+    const isExpress = dependencies.includes('express');
+
+    let port: number | null = null;
+    if (isVite) port = 5173;
+    else if (isExpress) port = 3000;
+
+    if (port) {
+      setTimeout(() => {
+        open(`http://localhost:${port}`);
+      }, 2000);
+    }
+  } catch (err) {
+    console.warn('Could not parse package.json for port detection');
+  }
+});
+
+ipcMain.on('stop-project', (_, dirPath: string) => {
+  const pid = runningProcesses.get(dirPath);
+  if (pid) {
+    try {
+      exec(`taskkill /PID ${pid} /T /F`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error terminating process: ${error.message}`);
+          return;
+        }
+        console.log(`Process terminated: ${stdout}`);
+        runningProcesses.delete(dirPath);
+      });
+    } catch (err) {
+      console.error('Failed to stop process:', err);
+    }
+  }
+});
+
+app.on('before-quit', () => {
+  for (const pid of runningProcesses.values()) {
+    try {
+      process.kill(-pid);
+    } catch {}
+  }
 });
 
 ipcMain.on('open-file', (_, filePath: string) => {
@@ -50,51 +138,26 @@ ipcMain.on('open-file', (_, filePath: string) => {
   else exec(`xdg-open "${filePath}"`);
 });
 
-ipcMain.on('create-project', (event, name) => {
-  const child = spawn('npm', ['run', 'create:x'], {
-    cwd: 'C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli', // path to your CLI
+ipcMain.on('create-project', (event, config: { name: string; [key: string]: any }) => {
+  const {name, ...projectConfig} = config;
+  const tempConfigPath = path.join(__dirname, '.temp-config.json');
+  fs.writeFileSync(tempConfigPath, JSON.stringify(projectConfig, null, 2));
+
+  const child = spawn('npm', ['run', 'create:x', '--', '--config',  `"${tempConfigPath}"`], {
+    cwd: 'C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli',
     shell: true,
-    env: { ...process.env, PROJECT_NAME: name }, // optionally pass name
+    env: { ...process.env, PROJECT_NAME: name },
   });
 
   child.stdout.on('data', (data) => {
-    // console.log(`[create:x] ${data}`);
     event.sender.send('command-log', data.toString());
   });
 
-  // child.stderr.on('data', (data) => {
-  //   // console.error(`[create:x error] ${data}`);
-  //   event.sender.send('command-log', `[ERROR] ${data.toString()}`);
-
-  // });
-
   child.on('close', (code) => {
+    fs.unlinkSync(tempConfigPath);
     console.log(`create:x exited with code ${code}`);
     if (code === 0) {
-      // Send back the path of the newly created project
       event.sender.send('project-created', path.join('C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli', name));
     }
   });
 });
-
-// ipcMain.handle('create-project', async (event, projectName: string) => {
-//   return new Promise((resolve, reject) => {
-//     const child = spawn('npm', ['run', 'create:x', '--', projectName], {
-//       cwd: 'C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli',
-//       shell: true,
-//     });
-
-//     child.stdout.on('data', (data) => {
-//       event.sender.send('command-log', data.toString());
-//     });
-
-//     child.stderr.on('data', (data) => {
-//       event.sender.send('command-log', `[ERROR] ${data.toString()}`);
-//     });
-
-//     child.on('close', (code) => {
-//       event.sender.send('command-log', `Command finished with code ${code}`);
-//       resolve(code);
-//     });
-//   });
-// });

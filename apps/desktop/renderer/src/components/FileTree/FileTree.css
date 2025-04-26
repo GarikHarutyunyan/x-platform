@@ -1,0 +1,31 @@
+.file-tree__node {
+    margin-left: 16px;
+}
+
+.file-tree__label {
+    cursor: pointer;
+}
+
+.file-tree__start-button {
+    margin-left: 8px;
+    width: 25px;
+    padding: 2px;
+    font-size: 0.9em;
+    cursor: pointer;
+    background: transparent;
+    /* border: 1px solid #aaa; */
+    border-radius: 4px;
+    color: #333;
+    transition: background 0.2s;
+    border: none;
+    outline: none;
+}
+
+.file-tree__start-button:focus {
+    border: none;
+    outline: none;
+}
+
+.file-tree__start-button:hover {
+    background: #f0f0f0;
+}
