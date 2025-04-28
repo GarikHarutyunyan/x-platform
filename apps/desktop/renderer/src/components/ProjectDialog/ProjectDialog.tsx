@@ -1,42 +1,56 @@
+import { Button, Checkbox, Form, Input, Modal } from 'antd';
 import './ProjectDialog.css';
 
+const defaultPorjectConfig = {name: ''};
+
 type Props = {
-  projectConfig: { name: string, [key: string]: any };
-  onChange: (config: { name: string, [key: string]: any }) => void;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (config: { name: string; [key: string]: any }) => void;
 };
 
-function ProjectDialog({ projectConfig, onChange, onCancel, onConfirm }: Props) {
+function ProjectDialog({ onCancel, onConfirm }: Props) {
 
-  const onConfigChange = (name: string, value: string | boolean) => {
-    onChange({...projectConfig, [name]: value})
-  } 
-
-  const onCheckboxChange = (e: any) => onConfigChange(e.target.name, e.target.checked)
+  const onFinish = (values: any) => {
+    onConfirm(values)
+  };
 
   return (
-    <div className="project-dialog__overlay">
-      <div className="project-dialog__container">
-        <h3>Enter Project Name</h3>
-        <input
-          type="text"
-          value={projectConfig.name}
-          onChange={(e) => onConfigChange('name', e.target.value)}
-          className="project-dialog__input"
-        />
-        <input type="checkbox" name="server" checked={projectConfig?.server} onChange={onCheckboxChange}/>
-        <label htmlFor="server"> Server</label><br />
-        <input type="checkbox" name="web" checked={projectConfig?.web} onChange={onCheckboxChange}/>
-        <label htmlFor="web"> Web</label><br />
-        <input type="checkbox" name="mobile" checked={projectConfig?.mobile} onChange={onCheckboxChange}/>
-        <label htmlFor="mobile"> Mobile</label><br/>
-        <input type="checkbox" name="desktop" checked={projectConfig?.desktop} onChange={onCheckboxChange}/>
-        <label htmlFor="desktop"> Desktop</label><br/><br/>
-        <button onClick={onConfirm}>Create</button>{' '}
-        <button onClick={onCancel}>Cancel</button>
-      </div>
-    </div>
+    <Modal
+      open
+      title="Enter Project Details"
+      onCancel={onCancel}
+      footer={null}
+    >
+      <Form
+        layout="vertical"
+        initialValues={defaultPorjectConfig}
+        onFinish={onFinish}
+      >
+        <Form.Item label="Project Name" name="name" rules={[{ required: true, message: 'Please input project name!' }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item name="server" valuePropName="checked">
+          <Checkbox>Server</Checkbox>
+        </Form.Item>
+        <Form.Item name="web" valuePropName="checked">
+          <Checkbox>Web</Checkbox>
+        </Form.Item>
+        <Form.Item name="mobile" valuePropName="checked">
+          <Checkbox>Mobile</Checkbox>
+        </Form.Item>
+        <Form.Item name="desktop" valuePropName="checked">
+          <Checkbox>Desktop</Checkbox>
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" style={{ marginRight: 8 }}>
+            {'Create'}
+          </Button>
+          <Button onClick={onCancel}>
+            {'Cancel'}
+          </Button>
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 }
 

@@ -10,12 +10,9 @@ export type FileNode = {
   children?: FileNode[];
 };
 
-const defaultPorjectConfig = {name: ''};
-
 function App() {
   const [root, setRoot] = useState<FileNode | null>(null);
   const [showDialog, setShowDialog] = useState(false);
-  const [projectConfig, setProjectConfig] = useState<any>(defaultPorjectConfig);
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -33,7 +30,6 @@ function App() {
 
     window.electronAPI.onProjectCreated((projectDir) => {
       setShowDialog(false);
-      setProjectConfig(defaultPorjectConfig);
       window.electronAPI.readDirectory(projectDir).then((newRoot) => {
         setRoot(newRoot);
         setIsLoading(false);
@@ -53,7 +49,7 @@ function App() {
   }, [logs]);
 
   const handleCreateProject = () => setShowDialog(true);
-  const confirmCreate = () => {
+  const confirmCreate = (projectConfig: any) => {
     const config: any = {name: projectConfig.name.trim()};
 
     if(projectConfig?.web) {
@@ -90,7 +86,6 @@ function App() {
     
     if (projectConfig.name.trim()) {
       window.electronAPI.createProject(config);
-      setProjectConfig(defaultPorjectConfig);
       setShowDialog(false);
       setIsLoading(true);
     }
@@ -111,8 +106,6 @@ function App() {
       )}
       {showDialog && (
         <ProjectDialog
-          projectConfig={projectConfig}
-          onChange={setProjectConfig}
           onCancel={() => setShowDialog(false)}
           onConfirm={confirmCreate}
         />
