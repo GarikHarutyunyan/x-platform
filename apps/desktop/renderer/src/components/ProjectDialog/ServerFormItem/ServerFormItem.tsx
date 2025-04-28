@@ -28,7 +28,7 @@ const ServerFormItem = () => {
             <Input />
           </Form.Item>
           <Form.Item
-            label="Use TypeScritp"
+            label="Use TypeScript"
             name={['node', 'useTypeScript']}
             valuePropName="checked"
             layout="horizontal"

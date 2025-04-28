@@ -28,7 +28,7 @@ const MobileFormItem = () => {
             <Input />
           </Form.Item>
           <Form.Item
-            label="Use TypeScritp"
+            label="Use TypeScript"
             name={['reactNative', 'useTypeScript']}
             valuePropName="checked"
             layout="horizontal"

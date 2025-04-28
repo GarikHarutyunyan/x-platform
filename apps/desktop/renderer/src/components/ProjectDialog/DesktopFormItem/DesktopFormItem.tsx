@@ -28,7 +28,7 @@ const DesktopFormItem = () => {
             <Input />
           </Form.Item>
           <Form.Item
-            label="Use TypeScritp"
+            label="Use TypeScript"
             name={['electron', 'useTypeScript']}
             valuePropName="checked"
             layout="horizontal"

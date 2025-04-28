@@ -28,7 +28,7 @@ const WebFormItem = () => {
             <Input />
           </Form.Item>
           <Form.Item
-            label="Use TypeScritp"
+            label="Use TypeScript"
             name={['react', 'useTypeScript']}
             valuePropName="checked"
             layout="horizontal"
