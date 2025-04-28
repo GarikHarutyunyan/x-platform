@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import {useEffect, useRef, useState} from 'react';
 import './App.css';
 import FileTree from './components/FileTree/FileTree';
 import ProjectDialog from './components/ProjectDialog/ProjectDialog';
@@ -19,7 +19,7 @@ function App() {
 
   useEffect(() => {
     window.electronAPI.onCommandLog((msg) => {
-      setLogs(prev => {
+      setLogs((prev) => {
         const newLogs = [...prev];
         if (msg !== newLogs.at(-1)) {
           return [...prev, msg];
@@ -44,46 +44,16 @@ function App() {
 
   useEffect(() => {
     if (logsContainerRef.current) {
-      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+      logsContainerRef.current.scrollTop =
+        logsContainerRef.current.scrollHeight;
     }
   }, [logs]);
 
   const handleCreateProject = () => setShowDialog(true);
+
   const confirmCreate = (projectConfig: any) => {
-    const config: any = {name: projectConfig.name.trim()};
+    const config: any = {...projectConfig, name: projectConfig.name.trim()};
 
-    if(projectConfig?.web) {
-      config.react =  {
-        "name": "web",
-        "path": "apps",
-        "useTypeScript": true,
-        "framework": "vite"
-      }
-    }
-    if(projectConfig?.server) {
-      config.node = {
-          "name": "server",
-          "path": "apps",
-          "useTypeScript": true
-        }
-    }
-    if(projectConfig?.mobile) {
-      config.reactNative = {
-        "name": "mobile",
-        "path": "apps",
-        "useTypeScript": false
-      }
-    }
-    if(projectConfig?.desktop) {
-      config.electron = {
-        "name": "desktop",
-        "path": "apps",
-        "useTypeScript": true
-      }
-    }
-
-    console.log(projectConfig)
-    
     if (projectConfig.name.trim()) {
       window.electronAPI.createProject(config);
       setShowDialog(false);
@@ -111,10 +81,7 @@ function App() {
         />
       )}
       {isLoading && (
-        <div
-          ref={logsContainerRef}
-          className="app-log-container"
-        >
+        <div ref={logsContainerRef} className="app-log-container">
           <strong>Logs:</strong>
           <pre>{logs.join('\n')}</pre>
         </div>

@@ -1,54 +1,68 @@
-import { Button, Checkbox, Form, Input, Modal } from 'antd';
+import {Form, Input, Modal} from 'antd';
+import DesktopFormItem from './DesktopFormItem/DesktopFormItem';
+import FormFooter from './FormFooter/FormFooter';
+import MobileFormItem from './MobileFormItem/MobileFormItem';
 import './ProjectDialog.css';
+import ServerFormItem from './ServerFormItem/ServerFormItem';
+import WebFormItem from './WebFormItem/WebFormItem';
 
-const defaultPorjectConfig = {name: ''};
+const defaultProjectConfig = {
+  name: '',
+  react: {
+    name: 'web',
+    path: 'apps',
+    useTypeScript: true,
+    framework: 'vite',
+  },
+  node: {
+    name: 'server',
+    path: 'apps',
+    useTypeScript: true,
+  },
+  reactNative: {
+    name: 'mobile',
+    path: 'apps',
+    useTypeScript: false,
+  },
+  electron: {
+    name: 'desktop',
+    path: 'apps',
+    useTypeScript: true,
+  },
+};
 
 type Props = {
   onCancel: () => void;
-  onConfirm: (config: { name: string; [key: string]: any }) => void;
+  onConfirm: (config: {name: string; [key: string]: any}) => void;
 };
 
-function ProjectDialog({ onCancel, onConfirm }: Props) {
+function ProjectDialog({onCancel, onConfirm}: Props) {
+  const [form] = Form.useForm();
 
   const onFinish = (values: any) => {
-    onConfirm(values)
+    onConfirm(values);
   };
 
   return (
-    <Modal
-      open
-      title="Enter Project Details"
-      onCancel={onCancel}
-      footer={null}
-    >
+    <Modal open title="Enter Project Details" onCancel={onCancel} footer={null}>
       <Form
+        form={form}
         layout="vertical"
-        initialValues={defaultPorjectConfig}
+        initialValues={defaultProjectConfig}
         onFinish={onFinish}
       >
-        <Form.Item label="Project Name" name="name" rules={[{ required: true, message: 'Please input project name!' }]}>
+        <Form.Item
+          label="Project Name"
+          name="name"
+          rules={[{required: true, message: 'Please input project name!'}]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="server" valuePropName="checked">
-          <Checkbox>Server</Checkbox>
-        </Form.Item>
-        <Form.Item name="web" valuePropName="checked">
-          <Checkbox>Web</Checkbox>
-        </Form.Item>
-        <Form.Item name="mobile" valuePropName="checked">
-          <Checkbox>Mobile</Checkbox>
-        </Form.Item>
-        <Form.Item name="desktop" valuePropName="checked">
-          <Checkbox>Desktop</Checkbox>
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" style={{ marginRight: 8 }}>
-            {'Create'}
-          </Button>
-          <Button onClick={onCancel}>
-            {'Cancel'}
-          </Button>
-        </Form.Item>
+        <ServerFormItem />
+        <WebFormItem />
+        <MobileFormItem />
+        <DesktopFormItem />
+        <FormFooter onCancel={onCancel} />
       </Form>
     </Modal>
   );
