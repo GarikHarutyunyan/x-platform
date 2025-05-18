@@ -1,4 +1,4 @@
-export { };
+export {};
 
 declare global {
   interface Window {
@@ -12,7 +12,7 @@ declare global {
       isStartableProject: (path: string) => Promise<boolean>;
       onCommandLog: (callback: (msg: string) => void) => void;
       onExpoUrl: (callback: (url: string) => void) => void;
-      selectDirectory?: () => Promise<string | null>;
+      selectDirectory: () => Promise<string | null>;
       onProjectCreated: (callback: (projectDir: string) => void) => void;
     };
   }

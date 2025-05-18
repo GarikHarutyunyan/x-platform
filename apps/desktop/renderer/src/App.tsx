@@ -35,11 +35,6 @@ function App() {
         setIsLoading(false);
       });
     });
-
-    // window.electronAPI.readDirectory('C:/Users/Lenovo/My Projects/FullStack/X-Platform/apps/cli/a').then((newRoot) => {
-    //     setRoot(newRoot);
-    //     setIsLoading(false);
-    //   });
   }, []);
 
   useEffect(() => {
@@ -61,11 +56,25 @@ function App() {
     }
   };
 
+  const handleOpenFolder = async () => {
+    const selectedPath = await window.electronAPI.selectDirectory();
+
+    if (selectedPath) {
+      const newRoot = await window.electronAPI.readDirectory(selectedPath);
+      setRoot(newRoot);
+    }
+  };
+
   return (
     <div className="app-container">
-      <button onClick={handleCreateProject} className="app-button">
-        🚀 Create Project
-      </button>
+      <div style={{display: 'flex', gap: '1rem'}}>
+        <button onClick={handleCreateProject} className="app-button">
+          🚀 Create Project
+        </button>
+        <button onClick={handleOpenFolder} className="app-button">
+          📂 Open Folder
+        </button>
+      </div>
       <br />
       {isLoading && 'Loading...'}
       {!isLoading && root && (
